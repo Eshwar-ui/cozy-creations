@@ -35,6 +35,7 @@ function PajamasScrollDown({ className }) {
 export default function App() {
   const [features, setFeatures] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState([]);
 
   // Helper to map API image strings to local imports if needed
   // If your API returns full URLs, you can use them directly.
@@ -50,15 +51,14 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Example: Fetching "Why Choose Us" features from API
-    // Replace 'endpoints.features' with your actual endpoint for this section
+    // Fetch "Why Choose Us" features (fallback to static data if API doesn't exist)
     fetchData(endpoints.features)
         .then(data => {
             setFeatures(data);
             setLoading(false);
         })
         .catch(err => {
-            console.log("Failed to fetch features, using fallback data.");
+            console.log("Features endpoint not available, using fallback data.");
             // Fallback data matches the design initially
             setFeatures([
                 { id: 1, title: 'Handmade With Love', desc: 'Small-batch poured with warmth, care & personal detail.', image: 'ellipse-172', bgIndex: 0 },
@@ -68,11 +68,45 @@ export default function App() {
             ]);
             setLoading(false);
         });
+
+    // Fetch Products from the API
+    fetchData(endpoints.products)
+        .then(response => {
+            console.log('Products API Response:', response);
+            if (response.success && response.data && Array.isArray(response.data)) {
+                setProducts(response.data);
+            } else {
+                console.warn('Unexpected API response structure:', response);
+            }
+        })
+        .catch(err => {
+            console.error("Error fetching products:", err);
+            setProducts([]); // Set empty array on error
+        });
   }, []);
 
   const getUnion = (index) => {
       const unions = [union, union1, union2, union3];
       return unions[index % unions.length];
+  };
+
+  // Helper to get product image URL
+  const getProductImageUrl = (url) => {
+      if (!url) return rectangle60;
+      
+      // If it's already a direct image URL, return it
+      if (url.startsWith('http') && (url.includes('.jpg') || url.includes('.png') || url.includes('.jpeg') || url.includes('unsplash.com/photos'))) {
+          // For Unsplash photo pages, try to extract ID and use direct image URL
+          const photoIdMatch = url.match(/photos\/[^-]+-([A-Za-z0-9_-]+)$/);
+          if (photoIdMatch && photoIdMatch[1]) {
+              // Use Unsplash's direct image API
+              return `https://images.unsplash.com/photo-${photoIdMatch[1]}?w=800&h=800&fit=crop`;
+          }
+          return url;
+      }
+      
+      // Fallback to default image
+      return rectangle60;
   };
 
   return (
@@ -162,8 +196,8 @@ export default function App() {
       </div>
 
       {/* Product Highlight Section */}
-      <div className="w-full min-h-screen bg-white flex flex-col md:flex-row overflow-hidden">
-        <div className="w-full md:w-1/2 flex flex-col justify-center px-10 md:pl-[100px] py-16 min-h-[50vh] md:min-h-screen">
+      <div className="w-full h-screen bg-white flex flex-col md:flex-row overflow-hidden">
+        <div className="w-full md:w-1/2 flex flex-col justify-center px-10 md:pl-[100px] py-16 h-full">
           <h2 className="font-normal text-4xl md:text-[62px] leading-tight text-black uppercase max-w-xl mb-12">
             Elevate Your Space With Handcrafted Glow
           </h2>
@@ -177,10 +211,52 @@ export default function App() {
             </button>
           </div>
         </div>
-        <div className="w-full md:w-1/2 flex items-center justify-center min-h-[50vh] md:min-h-screen">
+        <div className="w-full md:w-1/2 h-full overflow-hidden">
           <img src={rectangle60} alt="Candle" className="w-full h-full object-cover" />
         </div>
       </div>
+
+      
+      {/* Featured Collection Section */}
+      {products.length > 0 && (
+        <div className="w-full bg-white py-16">
+            <div className="max-w-[1280px] mx-auto px-4">
+                <h2 className="font-['Montserrat:Regular',sans-serif] font-normal text-4xl md:text-5xl text-black uppercase mb-12 text-center">
+                    Our Collection
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+                    {products.map((product) => (
+                        <div key={product.id} className="flex flex-col group cursor-pointer">
+                            <div className="w-full aspect-square overflow-hidden rounded-lg bg-gray-100 mb-4 relative">
+                                <img 
+                                    src={getProductImageUrl(product.imageUrl)} 
+                                    alt={product.altText || product.name} 
+                                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                    onError={(e) => { e.target.src = rectangle60; }}
+                                />
+                                {product.category && (
+                                    <span className="absolute top-2 left-2 bg-white px-2 py-1 text-xs font-semibold uppercase tracking-wider rounded">
+                                        {product.category}
+                                    </span>
+                                )}
+                            </div>
+                            <h3 className="font-['Montserrat:Medium',sans-serif] font-medium text-lg text-black mb-2">
+                                {product.name}
+                            </h3>
+                            <div className="flex justify-between items-center">
+                                <p className="font-['Montserrat:Regular',sans-serif] font-normal text-gray-800 text-lg">
+                                    ₹{product.price}
+                                </p>
+                                <span className="font-['Montserrat:Regular',sans-serif] font-normal text-xs text-gray-500 capitalize">
+                                    {product.waxType} Wax
+                                </span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+      )}
 
       {/* Why Choose Us Section */}
       <div className="relative w-full h-auto min-h-[650px] bg-gray-50 overflow-hidden">
@@ -197,12 +273,11 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 px-8">
                 {features.map((feature, index) => (
                     <div key={feature.id} className="flex flex-col items-center text-center">
-                        <div className="relative mb-6 flex justify-center items-center">
-                            <img src={getUnion(index)} alt="Background Shape" className="absolute w-[247px] h-[187px] object-contain scale-110" />
-                            <img src={getImage(feature.image)} alt={feature.title} className="w-[170px] h-[170px] rounded-full object-cover relative z-10 mt-6" />
+                        <div className="mb-6 flex justify-center items-center">
+                            <img src={getImage(feature.image)} alt={feature.title} className="w-[170px] h-[170px] rounded-full object-cover" />
                         </div>
-                        <h3 className="font-medium text-lg mb-2 relative z-10 mt-8">{feature.title}</h3>
-                        <p className="text-sm text-gray-800 relative z-10">{feature.desc}</p>
+                        <h3 className="font-medium text-lg mb-2">{feature.title}</h3>
+                        <p className="text-sm text-gray-800">{feature.desc}</p>
                     </div>
                 ))}
             </div>
@@ -215,10 +290,11 @@ export default function App() {
         </div>
       </div>
 
+
       {/* Footer Section */}
       <div className="relative w-full bg-[#191816] text-white py-16 overflow-visible">
         {/* Decorative Background Image */}
-         <div className="overflow-visible lg:block absolute top-[-10px] right-[2%] w-[380px] h-[500px] opacity-100 pointer-events-none">
+         <div className="overflow-visible lg:block absolute top-[-170px] right-[2%] w-[380px] h-[500px] opacity-100 pointer-events-none">
              <img src={whatsapp2} alt="Decor" className="w-full h-[100%] object-contain" />
          </div>
 
@@ -226,7 +302,7 @@ export default function App() {
              <div className="flex flex-col md:flex-row gap-10 md:gap-20 items-center md:items-start">
                  {/* Footer Image */}
                  <div className="w-[300px] h-[200px] rounded-2xl overflow-hidden relative">
-                     <img src={whatsapp3} alt="Footer Candle" className="w-full h-full object-cover" />
+                     <img src={whatsapp3} alt="Footer Candle" className="w-full h-full object-fill" />
                  </div>
                  
                  {/* Links */}

@@ -6,7 +6,7 @@
  */
 
 // REPLACE WITH YOUR ACTUAL API URL
-const BASE_URL = 'http://localhost:5000/api'; 
+const BASE_URL = 'https://cozy-backend-1.onrender.com/api'; 
 
 export const endpoints = {
   products: `${BASE_URL}/products`,
@@ -31,4 +31,3 @@ export const fetchData = async (url) => {
     throw error;
   }
 };
-
